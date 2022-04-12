@@ -1,4 +1,5 @@
 const keyAPI = "AIzaSyBnX5UeDfw19F7lpUEvhxYcTFCJIVrUiFA";
+let map;
 
 function initMap() {
   const center = { lat: 39.1738, lng: -106.8441 };
@@ -19,6 +20,82 @@ function initMap() {
     ],
   });
 
+  // -------------SEARCH BOX------------------
+  const input = document.getElementById("pac-input");
+  const searchBox = new google.maps.places.SearchBox(input);
+  map.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
+
+  searchBox.setBounds({ east: -101, west: -110, north: 41.5, south: 36.5 });
+
+  let markers = [];
+
+  searchBox.addListener("places_changed", () => {
+    const places = searchBox.getPlaces();
+
+    if (places.length === 0) {
+      return;
+    }
+
+    markers.forEach((marker) => {
+      marker.setMap(null);
+    });
+    markers = [];
+
+    const bounds = new google.maps.LatLngBounds();
+
+    places.forEach((place) => {
+      if (!place.geometry || !place.geometry.location) {
+        console.log("Returned place contains no geometry");
+        return;
+      }
+
+      const icon = {
+        url: place.icon,
+        size: new google.maps.Size(71, 71),
+        origin: new google.maps.Point(0, 0),
+        scaledSize: new google.maps.Size(50, 50),
+      };
+
+      let markerFoundPoint = new google.maps.Marker({
+        map,
+        icon,
+        title: place.name,
+        position: place.geometry.location,
+      });
+
+      markers.push(markerFoundPoint);
+
+      if (place.geometry.viewport) {
+        bounds.union(place.geometry.viewport);
+      } else {
+        bounds.extend(place.geometry.location);
+      }
+
+      let infoWindowFoundPlace = new google.maps.InfoWindow({
+        position: place.geometry.location,
+        pixelOffset: new google.maps.Size(-10, 0),
+      });
+
+      let infoWindowPlaceContent =
+        '<p class="info-window-title">' +
+        place.formatted_address +
+        "</p>" +
+        "Latitude: " +
+        place.geometry.location.toJSON().lat +
+        "<br>" +
+        "Longitude: " +
+        place.geometry.location.toJSON().lng;
+
+      infoWindowFoundPlace.setContent(infoWindowPlaceContent);
+      infoWindowFoundPlace.open(map, markerFoundPoint);
+    });
+    map.fitBounds(bounds);
+  });
+
+  loadRoadLayers();
+}
+
+function loadRoadLayers() {
   // ------------ROADS LAYER------------------
   layerRoads = new google.maps.Data({ map: map });
   layerRoads.addGeoJson(geojsonRoads);
@@ -95,77 +172,12 @@ function initMap() {
     infoWindowRoad.open(map);
   }
 
-  // -------------SEARCH BOX------------------
-  const input = document.getElementById("pac-input");
-  const searchBox = new google.maps.places.SearchBox(input);
-  map.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
-
-  searchBox.setBounds({ east: -101, west: -110, north: 41.5, south: 36.5 });
-
-  let markers = [];
-
-  searchBox.addListener("places_changed", () => {
-    const places = searchBox.getPlaces();
-
-    if (places.length === 0) {
-      return;
-    }
-
-    markers.forEach((marker) => {
-      marker.setMap(null);
-    });
-    markers = [];
-
-    const bounds = new google.maps.LatLngBounds();
-
-    places.forEach((place) => {
-      if (!place.geometry || !place.geometry.location) {
-        console.log("Returned place contains no geometry");
-        return;
-      }
-
-      const icon = {
-        url: place.icon,
-        size: new google.maps.Size(71, 71),
-        origin: new google.maps.Point(0, 0),
-        scaledSize: new google.maps.Size(50, 50),
-      };
-
-      let markerFoundPoint = new google.maps.Marker({
-        map,
-        icon,
-        title: place.name,
-        position: place.geometry.location,
-      });
-
-      markers.push(markerFoundPoint);
-
-      if (place.geometry.viewport) {
-        bounds.union(place.geometry.viewport);
-      } else {
-        bounds.extend(place.geometry.location);
-      }
-
-      let infoWindowFoundPlace = new google.maps.InfoWindow({
-        position: place.geometry.location,
-        pixelOffset: new google.maps.Size(-10, 0),
-      });
-
-      let infoWindowPlaceContent =
-        '<p class="info-window-title">' +
-        place.formatted_address +
-        "</p>" +
-        "Latitude: " +
-        place.geometry.location.toJSON().lat +
-        "<br>" +
-        "Longitude: " +
-        place.geometry.location.toJSON().lng;
-
-      infoWindowFoundPlace.setContent(infoWindowPlaceContent);
-      infoWindowFoundPlace.open(map, markerFoundPoint);
-    });
-    map.fitBounds(bounds);
-  });
+  let mapBounds = new google.maps.LatLngBounds();
+  let pointSW = new google.maps.LatLng(37.048, -108.901);
+  let pointNE = new google.maps.LatLng(41.0426, -104.9058);
+  mapBounds.extend(pointSW);
+  mapBounds.extend(pointNE);
+  map.fitBounds(mapBounds);
 
   layerRoads.addListener("click", showRoadInfo);
 }
