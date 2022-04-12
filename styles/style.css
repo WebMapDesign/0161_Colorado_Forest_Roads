@@ -6,10 +6,8 @@ body {
 }
 
 #map {
-  margin: 10px;
-  width: 800px;
-  height: 600px;
-  border: 2px solid black;
+  width: 100vw;
+  height: 100vh;
 }
 
 .gm-style-iw-c {
