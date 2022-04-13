@@ -27,19 +27,12 @@ function initMap() {
 
   searchBox.setBounds({ east: -101, west: -110, north: 41.5, south: 36.5 });
 
-  let markers = [];
-
   searchBox.addListener("places_changed", () => {
     const places = searchBox.getPlaces();
 
     if (places.length === 0) {
       return;
     }
-
-    markers.forEach((marker) => {
-      marker.setMap(null);
-    });
-    markers = [];
 
     const bounds = new google.maps.LatLngBounds();
 
@@ -49,45 +42,11 @@ function initMap() {
         return;
       }
 
-      const icon = {
-        url: place.icon,
-        size: new google.maps.Size(71, 71),
-        origin: new google.maps.Point(0, 0),
-        scaledSize: new google.maps.Size(50, 50),
-      };
-
-      let markerFoundPoint = new google.maps.Marker({
-        map,
-        icon,
-        title: place.name,
-        position: place.geometry.location,
-      });
-
-      markers.push(markerFoundPoint);
-
       if (place.geometry.viewport) {
         bounds.union(place.geometry.viewport);
       } else {
         bounds.extend(place.geometry.location);
       }
-
-      let infoWindowFoundPlace = new google.maps.InfoWindow({
-        position: place.geometry.location,
-        pixelOffset: new google.maps.Size(-10, 0),
-      });
-
-      let infoWindowPlaceContent =
-        '<p class="info-window-title">' +
-        place.formatted_address +
-        "</p>" +
-        "Latitude: " +
-        place.geometry.location.toJSON().lat +
-        "<br>" +
-        "Longitude: " +
-        place.geometry.location.toJSON().lng;
-
-      infoWindowFoundPlace.setContent(infoWindowPlaceContent);
-      infoWindowFoundPlace.open(map, markerFoundPoint);
     });
     map.fitBounds(bounds);
   });
@@ -95,13 +54,38 @@ function initMap() {
   loadRoadLayers();
 }
 
+// ------------ROADS LAYER------------------
 function loadRoadLayers() {
-  // ------------ROADS LAYER------------------
+  const roadStyleUnchanged = {
+    strokeColor: "#ec7632",
+    strokeOpacity: 1.0,
+  };
+
+  map.addListener("zoom_changed", () => {
+    currentMapZoom = map.zoom;
+
+    if (currentMapZoom > 9) {
+      layerRoads.setStyle({
+        ...roadStyleUnchanged,
+        strokeWeight: 4,
+      });
+    } else if (currentMapZoom > 11) {
+      layerRoads.setStyle({
+        ...roadStyleUnchanged,
+        strokeWeight: 6,
+      });
+    } else {
+      layerRoads.setStyle({
+        ...roadStyleUnchanged,
+        strokeWeight: 2,
+      });
+    }
+  });
+
   layerRoads = new google.maps.Data({ map: map });
   layerRoads.addGeoJson(geojsonRoads);
   layerRoads.setStyle({
-    strokeColor: "#ec7632",
-    strokeOpacity: 1.0,
+    ...roadStyleUnchanged,
     strokeWeight: 2,
   });
   layerRoads.setMap(map);
@@ -148,11 +132,11 @@ function loadRoadLayers() {
 
     if (routeForestName) {
       infoWindowRoadContent +=
-        '<p class="route-other-info">Open: ' + routeForestName + "</p>";
+        '<p class="route-other-info">' + routeForestName + "</p>";
 
       if (routeSeasonality) {
         infoWindowRoadContent +=
-          '<p class="route-open">' + routeSeasonality + "</p>";
+          '<p class="route-open">Open: ' + routeSeasonality + "</p>";
       }
     }
 
@@ -160,11 +144,7 @@ function loadRoadLayers() {
       '<a href="' +
       locationUrl +
       '"' +
-      '" class="directions-button" target="_blank">' +
-      latitudeClickedPoint.toFixed(6) +
-      ", " +
-      longitudeClickedPoint.toFixed(6) +
-      "</a>";
+      '" class="directions-button" target="_blank">Save GPS Coordinates</a>';
 
     infoWindowRoad.setContent(infoWindowRoadContent);
     infoWindowRoad.setPosition(event.latLng);
@@ -180,4 +160,30 @@ function loadRoadLayers() {
   map.fitBounds(mapBounds);
 
   layerRoads.addListener("click", showRoadInfo);
+
+  const infoWindowClickedPoint = new google.maps.InfoWindow();
+
+  map.addListener("click", function (event) {
+    let latitudeClickedPoint = event.latLng.toJSON().lat;
+    let longitudeClickedPoint = event.latLng.toJSON().lng;
+
+    let pointLocationUrl =
+      "https://www.google.com/maps/place/" +
+      latitudeClickedPoint.toString() +
+      ",+" +
+      longitudeClickedPoint.toString();
+
+    let infoWindowClickedPointContent =
+      '<a href="' +
+      pointLocationUrl +
+      '"' +
+      '" class="directions-button" target="_blank">Save GPS Coordinates</a>';
+
+    infoWindowClickedPoint.setContent(infoWindowClickedPointContent);
+    infoWindowClickedPoint.setPosition(event.latLng);
+    infoWindowClickedPoint.setOptions({
+      pixelOffset: new google.maps.Size(0, 0),
+    });
+    infoWindowClickedPoint.open(map);
+  });
 }
